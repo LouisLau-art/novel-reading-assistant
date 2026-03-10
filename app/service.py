@@ -6,8 +6,9 @@ from app.retrieval.retrieve import filter_by_progress
 
 
 class ReadingAssistant:
-    def __init__(self, alias_map: dict[str, str]) -> None:
+    def __init__(self, alias_map: dict[str, str], llm_client: object | None = None) -> None:
         self.resolver = AliasResolver(alias_map)
+        self.llm_client = llm_client
 
     def answer(
         self,
@@ -28,6 +29,16 @@ class ReadingAssistant:
             history_cards,
             current_chapter_idx,
         )
+
+        if self.llm_client is not None:
+            prompt = self._build_llm_prompt(
+                question=question,
+                chapter_idx=current_chapter_idx,
+                person_summary=person_summary,
+                scene_summary=scene_summary,
+                history_summary=history_summary,
+            )
+            return str(self.llm_client.chat(prompt))
 
         return compose_answer(
             person_summary=person_summary,
@@ -80,3 +91,21 @@ class ReadingAssistant:
             if lowered_targets & keywords:
                 return str(card.get("summary", ""))
         return "当前没有匹配到明确的历史背景卡。"
+
+    def _build_llm_prompt(
+        self,
+        question: str,
+        chapter_idx: int,
+        person_summary: str,
+        scene_summary: str,
+        history_summary: str,
+    ) -> str:
+        return (
+            "你是一个防剧透的中文小说阅读助手。\n"
+            f"用户问题：{question}\n"
+            f"回答范围：只能基于用户读到的第 {chapter_idx} 章之前。\n\n"
+            "请只根据下面材料作答，不要补充材料之外的信息，不要剧透。\n\n"
+            f"人物/术语解释：\n{person_summary}\n\n"
+            f"小说内解释：\n{scene_summary}\n\n"
+            f"历史背景解释：\n{history_summary}\n"
+        )

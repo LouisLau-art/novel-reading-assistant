@@ -80,3 +80,34 @@ python -m app.api.cli ask \
   --character-cards-file ./examples/character_cards.example.jsonl \
   --history-cards-file ./examples/history_cards.example.jsonl
 ```
+
+## Enable Volcengine LLM
+
+Set environment variables locally:
+
+```bash
+export ARK_API_KEY="replace-with-a-new-key"
+export ARK_MODEL="doubao-seed-1-8-251228"
+```
+
+Optional override:
+
+```bash
+export ARK_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
+```
+
+Then enable LLM for the final answer generation step:
+
+```bash
+python -m app.api.cli ask \
+  --question "玉昆是谁" \
+  --chapter-idx 120 \
+  --index-root ./data/indexes \
+  --collection-name zaizhitianxia \
+  --alias-file ./examples/character_aliases.example.csv \
+  --character-cards-file ./examples/character_cards.example.jsonl \
+  --history-cards-file ./examples/history_cards.example.jsonl \
+  --use-llm
+```
+
+The anti-spoiler filter still runs locally before the model call. The LLM only sees already-filtered evidence.

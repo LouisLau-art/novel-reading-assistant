@@ -63,3 +63,38 @@ def test_cli_answer_can_expand_alias_to_canonical_name(tmp_path: Path):
     )
 
     assert "韩冈刚刚醒来" in answer
+
+
+def test_answer_question_can_use_llm_client_without_future_spoilers(tmp_path: Path):
+    class FakeLLM:
+        def __init__(self) -> None:
+            self.prompt = ""
+
+        def chat(self, prompt: str) -> str:
+            self.prompt = prompt
+            return "这是 LLM 生成的最终回答。"
+
+    source = tmp_path / "novel.txt"
+    source.write_text(
+        "第一章 开始\n"
+        "韩冈刚刚醒来。\n\n"
+        "第二章 后文剧透章\n"
+        "韩冈后来权势大变。\n",
+        encoding="utf-8",
+    )
+
+    index_root = tmp_path / "index"
+    ingest_source(source=source, index_root=index_root)
+    llm = FakeLLM()
+
+    answer = answer_question(
+        question="韩冈是谁",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+        llm_client=llm,
+    )
+
+    assert answer == "这是 LLM 生成的最终回答。"
+    assert "第二章" not in llm.prompt
+    assert "第一章" in llm.prompt

@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from app.config import Settings
 from app.ingestion.pipeline import ingest_txt_novel
 from app.knowledge.cards import load_character_cards, load_history_cards
+from app.llm.volcengine import VolcengineChatClient
 from app.retrieval.alias_resolver import load_alias_map
 from app.retrieval.vector_index import LocalVectorIndex
 from app.service import ReadingAssistant
@@ -42,6 +44,7 @@ def answer_question(
     alias_map: dict[str, str] | None = None,
     character_cards: dict[str, dict] | None = None,
     history_cards: list[dict] | None = None,
+    llm_client: object | None = None,
     n_results: int = 5,
 ) -> str:
     resolver = ReadingAssistant(alias_map or {}).resolver
@@ -63,13 +66,27 @@ def answer_question(
         }
         for item in hits
     ]
-    assistant = ReadingAssistant(alias_map or {})
+    assistant = ReadingAssistant(alias_map or {}, llm_client=llm_client)
     return assistant.answer(
         question=question,
         current_chapter_idx=chapter_idx,
         novel_docs=novel_docs,
         character_cards=character_cards or {},
         history_cards=history_cards or [],
+    )
+
+
+def build_llm_client(model_override: str | None = None) -> VolcengineChatClient:
+    settings = Settings.from_env()
+    model = model_override or settings.llm_model
+    if not settings.llm_api_key:
+        raise RuntimeError("ARK_API_KEY is required when --use-llm is enabled")
+    if not model:
+        raise RuntimeError("ARK_MODEL or --llm-model is required when --use-llm is enabled")
+    return VolcengineChatClient(
+        api_key=settings.llm_api_key,
+        model=model,
+        base_url=settings.llm_base_url,
     )
 
 
@@ -90,6 +107,8 @@ def main() -> None:
     ask_parser.add_argument("--alias-file")
     ask_parser.add_argument("--character-cards-file")
     ask_parser.add_argument("--history-cards-file")
+    ask_parser.add_argument("--use-llm", action="store_true")
+    ask_parser.add_argument("--llm-model")
 
     args = parser.parse_args()
     if args.command == "ingest":
@@ -119,6 +138,7 @@ def main() -> None:
                 if args.history_cards_file
                 else None
             ),
+            llm_client=build_llm_client(args.llm_model) if args.use_llm else None,
         )
     )
 
