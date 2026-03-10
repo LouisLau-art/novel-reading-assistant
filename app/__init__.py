@@ -1,0 +1,1 @@
+"""Novel reading assistant package."""
