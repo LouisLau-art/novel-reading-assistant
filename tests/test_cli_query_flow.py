@@ -247,6 +247,84 @@ def test_answer_question_uses_chapter_order_before_ranking_results(tmp_path: Pat
     assert "位极人臣" not in answer
 
 
+def test_answer_question_prefers_subject_term_over_generic_question_suffix(tmp_path: Path):
+    index_root = tmp_path / "index"
+    index = LocalVectorIndex(index_root)
+    index.upsert_many(
+        "novel",
+        [
+            {
+                "id": "generic",
+                "document": "贺方看着字帖，心想这到底是什么意思。",
+                "metadata": {
+                    "chapter_idx": 1,
+                    "chapter_order": 1,
+                    "chapter_title": "第一章",
+                },
+            },
+            {
+                "id": "target",
+                "document": "边地百姓常被征发起来充当民夫，负责运粮和筑城。",
+                "metadata": {
+                    "chapter_idx": 1,
+                    "chapter_order": 1,
+                    "chapter_title": "第一章",
+                },
+            },
+        ],
+    )
+
+    answer = answer_question(
+        question="民夫是什么意思",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+        n_results=1,
+    )
+
+    assert "充当民夫" in answer
+    assert "这到底是什么意思" not in answer
+
+
+def test_answer_question_strips_meaning_suffix_for_term_queries(tmp_path: Path):
+    index_root = tmp_path / "index"
+    index = LocalVectorIndex(index_root)
+    index.upsert_many(
+        "novel",
+        [
+            {
+                "id": "generic",
+                "document": "韩冈一时想不明白这是什么意思，心里只觉得莫名其妙。",
+                "metadata": {
+                    "chapter_idx": 1,
+                    "chapter_order": 1,
+                    "chapter_title": "第一章",
+                },
+            },
+            {
+                "id": "target",
+                "document": "所谓养娘，是宋代对家养婢女的一种称呼。",
+                "metadata": {
+                    "chapter_idx": 1,
+                    "chapter_order": 1,
+                    "chapter_title": "第一章",
+                },
+            },
+        ],
+    )
+
+    answer = answer_question(
+        question="养娘是什么意思",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+        n_results=1,
+    )
+
+    assert "所谓养娘" in answer
+    assert "莫名其妙" not in answer
+
+
 def test_ingest_source_replaces_existing_collection_contents(tmp_path: Path):
     first_source = tmp_path / "first.txt"
     first_source.write_text(

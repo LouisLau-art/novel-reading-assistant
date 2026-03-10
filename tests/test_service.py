@@ -21,6 +21,26 @@ def test_reading_assistant_answers_without_future_docs():
     assert "韩冈，截至第十章前的重要人物。" in answer
 
 
+def test_reading_assistant_uses_question_subject_for_direct_person_queries():
+    assistant = ReadingAssistant({})
+    answer = assistant.answer(
+        question="李元昊是谁",
+        current_chapter_idx=10,
+        novel_docs=[
+            {"chapter_idx": 2, "chapter_title": "第二章", "text": "李元昊举起叛旗，建立西夏政权。"},
+        ],
+        character_cards={
+            "李元昊": {
+                "first_chapter_idx": 2,
+                "summary": "李元昊是西夏政权的建立者。",
+            }
+        },
+        history_cards=[],
+    )
+
+    assert "李元昊是西夏政权的建立者。" in answer
+
+
 def test_reading_assistant_can_delegate_final_response_to_llm():
     class FakeLLM:
         def __init__(self) -> None:
@@ -118,3 +138,26 @@ def test_reading_assistant_does_not_report_missing_character_card_for_term_quest
     )
 
     assert "未找到 表字是什么意思 的人物卡。" not in answer
+    assert "对应人物" not in answer
+    assert "这次问题更像术语或背景解释" in answer
+
+
+def test_reading_assistant_uses_question_subject_for_direct_character_questions():
+    assistant = ReadingAssistant({})
+    answer = assistant.answer(
+        question="王安石是谁",
+        current_chapter_idx=3,
+        novel_docs=[
+            {"chapter_idx": 2, "chapter_title": "第二章", "text": "王安石、司马光这些名字帮助贺方确认时代。"},
+        ],
+        character_cards={
+            "王安石": {
+                "first_chapter_idx": 2,
+                "summary": "王安石是前期用来标定时代背景的重要朝臣名字。",
+            }
+        },
+        history_cards=[],
+    )
+
+    assert "王安石是前期用来标定时代背景的重要朝臣名字。" in answer
+    assert "未找到 王安石是谁 的人物卡。" not in answer

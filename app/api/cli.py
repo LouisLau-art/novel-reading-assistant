@@ -10,7 +10,7 @@ from app.knowledge.cards import load_character_cards, load_history_cards
 from app.llm.volcengine import VolcengineChatClient
 from app.retrieval.alias_resolver import load_alias_map
 from app.retrieval.vector_index import LocalVectorIndex
-from app.service import ReadingAssistant
+from app.service import ReadingAssistant, _question_subject
 
 
 def build_request(question: str, chapter_idx: int) -> dict[str, int | str]:
@@ -49,8 +49,12 @@ def answer_question(
     n_results: int = 5,
 ) -> str:
     resolver = ReadingAssistant(alias_map or {}).resolver
-    canonical_name = resolver.resolve(question) or question
-    query_text = question if canonical_name == question else f"{question} {canonical_name}"
+    resolved_name = resolver.resolve(question)
+    canonical_name = resolved_name or question
+    query_focus = _question_subject(question)
+    query_text = query_focus
+    if resolved_name and canonical_name != query_focus:
+        query_text = f"{query_focus} {canonical_name}"
 
     index = LocalVectorIndex(index_root)
     hits = index.query(
