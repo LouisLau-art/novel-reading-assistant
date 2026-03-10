@@ -76,3 +76,45 @@ def test_reading_assistant_includes_alias_resolution_in_prompt_without_character
     assert "玉昆" in llm.prompt
     assert "韩冈" in llm.prompt
     assert "对应人物" in llm.prompt
+
+
+def test_reading_assistant_matches_history_cards_by_keyword_in_question():
+    assistant = ReadingAssistant({})
+    answer = assistant.answer(
+        question="表字是什么意思",
+        current_chapter_idx=5,
+        novel_docs=[
+            {"chapter_idx": 2, "chapter_title": "第二章", "text": "姓韩名冈，有个表字唤作玉昆。"},
+        ],
+        character_cards={},
+        history_cards=[
+            {
+                "keywords": ["表字", "字"],
+                "min_chapter_idx": 1,
+                "summary": "表字是古人成年后的正式社交称呼。",
+            }
+        ],
+    )
+
+    assert "表字是古人成年后的正式社交称呼。" in answer
+
+
+def test_reading_assistant_does_not_report_missing_character_card_for_term_question():
+    assistant = ReadingAssistant({})
+    answer = assistant.answer(
+        question="表字是什么意思",
+        current_chapter_idx=5,
+        novel_docs=[
+            {"chapter_idx": 2, "chapter_title": "第二章", "text": "姓韩名冈，有个表字唤作玉昆。"},
+        ],
+        character_cards={},
+        history_cards=[
+            {
+                "keywords": ["表字"],
+                "min_chapter_idx": 1,
+                "summary": "表字是古人成年后的正式社交称呼。",
+            }
+        ],
+    )
+
+    assert "未找到 表字是什么意思 的人物卡。" not in answer

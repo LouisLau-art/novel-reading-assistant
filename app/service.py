@@ -61,6 +61,8 @@ class ReadingAssistant:
     ) -> str:
         card = character_cards.get(canonical_name)
         if not card:
+            if canonical_name == question and _looks_like_term_question(question):
+                return "这次问题更像术语或背景解释，优先参考正文和历史背景卡。"
             if canonical_name != question:
                 return (
                     f"已识别“{_question_subject(question)}”对应人物为“{canonical_name}”，"
@@ -93,13 +95,21 @@ class ReadingAssistant:
         history_cards: list[dict],
         current_chapter_idx: int,
     ) -> str:
-        lowered_targets = {question.lower(), canonical_name.lower()}
+        lowered_question = question.lower()
+        lowered_canonical_name = canonical_name.lower()
         for card in history_cards:
             min_chapter_idx = int(card.get("min_chapter_idx", 0))
             if min_chapter_idx > current_chapter_idx:
                 continue
-            keywords = {str(item).lower() for item in card.get("keywords", [])}
-            if lowered_targets & keywords:
+            keywords = [
+                str(item).strip().lower()
+                for item in card.get("keywords", [])
+                if str(item).strip()
+            ]
+            if any(
+                keyword == lowered_canonical_name or keyword in lowered_question
+                for keyword in keywords
+            ):
                 return str(card.get("summary", ""))
         return "当前没有匹配到明确的历史背景卡。"
 
@@ -128,3 +138,8 @@ def _question_subject(question: str) -> str:
         if subject.endswith(suffix):
             return subject[: -len(suffix)] or subject
     return subject
+
+
+def _looks_like_term_question(question: str) -> bool:
+    normalized = question.strip().rstrip("？?").lower()
+    return normalized.endswith(("是什么意思", "是什么", "指什么", "什么意思", "啥意思"))
