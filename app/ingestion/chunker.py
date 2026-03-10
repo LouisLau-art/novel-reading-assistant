@@ -7,6 +7,7 @@ def chunk_text(
     chapter_idx: int,
     chapter_title: str,
     content: str,
+    chapter_order: int | None = None,
     chunk_size: int = 120,
     overlap: int = 20,
 ) -> list[dict[str, int | str]]:
@@ -21,6 +22,7 @@ def chunk_text(
     start = 0
     step = chunk_size - overlap
     total = ceil(max(len(text) - overlap, 1) / step)
+    order = chapter_order or chapter_idx
 
     for index in range(total):
         end = start + chunk_size
@@ -29,9 +31,10 @@ def chunk_text(
             break
         chunks.append(
             {
-                "chunk_id": f"{chapter_idx}-{index + 1}",
-                "parent_id": f"chapter-{chapter_idx}",
+                "chunk_id": f"{order}-{index + 1}",
+                "parent_id": f"chapter-{order}",
                 "chapter_idx": chapter_idx,
+                "chapter_order": order,
                 "chapter_title": chapter_title,
                 "text": chunk,
             }

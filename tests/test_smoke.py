@@ -16,3 +16,18 @@ def test_settings_can_read_volcengine_env(monkeypatch):
     assert settings.llm_api_key == "test-key"
     assert settings.llm_model == "doubao-seed-1-8-251228"
     assert settings.llm_base_url == "https://ark.cn-beijing.volces.com/api/v3"
+
+
+def test_settings_can_load_dotenv_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("ARK_API_KEY", raising=False)
+    monkeypatch.delenv("ARK_MODEL", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "ARK_API_KEY=dotenv-key\nARK_MODEL=glm-4-7-251222\n",
+        encoding="utf-8",
+    )
+
+    settings = Settings.from_env(env_file=env_file)
+
+    assert settings.llm_api_key == "dotenv-key"
+    assert settings.llm_model == "glm-4-7-251222"

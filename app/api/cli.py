@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from app.bootstrap.seed import bootstrap_seed_files
 from app.config import Settings
 from app.ingestion.pipeline import ingest_txt_novel
 from app.knowledge.cards import load_character_cards, load_history_cards
@@ -56,12 +57,20 @@ def answer_question(
         collection_name,
         query_text,
         n_results=n_results,
-        where={"chapter_idx": {"$lte": chapter_idx}},
+        where={"chapter_order": {"$lte": chapter_idx}},
     )
+    if not hits:
+        hits = index.query(
+            collection_name,
+            query_text,
+            n_results=n_results,
+            where={"chapter_idx": {"$lte": chapter_idx}},
+        )
     novel_docs = [
         {
             "text": item.get("document", ""),
             "chapter_idx": item.get("metadata", {}).get("chapter_idx", 0),
+            "chapter_order": item.get("metadata", {}).get("chapter_order", 0),
             "chapter_title": item.get("metadata", {}).get("chapter_title", "未知章节"),
         }
         for item in hits
@@ -99,6 +108,11 @@ def main() -> None:
     ingest_parser.add_argument("--index-root", required=True)
     ingest_parser.add_argument("--collection-name")
 
+    bootstrap_parser = subparsers.add_parser("bootstrap-seed")
+    bootstrap_parser.add_argument("--source", required=True)
+    bootstrap_parser.add_argument("--output-dir", required=True)
+    bootstrap_parser.add_argument("--max-candidates", type=int, default=200)
+
     ask_parser = subparsers.add_parser("ask")
     ask_parser.add_argument("--question", required=True)
     ask_parser.add_argument("--chapter-idx", required=True, type=int)
@@ -117,6 +131,16 @@ def main() -> None:
                 source=Path(args.source),
                 index_root=Path(args.index_root),
                 collection_name=args.collection_name,
+            )
+        )
+        return
+
+    if args.command == "bootstrap-seed":
+        print(
+            bootstrap_seed_files(
+                source=Path(args.source),
+                output_dir=Path(args.output_dir),
+                max_candidates=args.max_candidates,
             )
         )
         return

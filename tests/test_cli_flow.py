@@ -134,3 +134,33 @@ def test_cli_ask_supports_character_and_history_card_files(tmp_path: Path):
 
     assert "韩冈，截至第一章前的重要人物。" in result.stdout
     assert "这里涉及北宋政局与新法讨论。" in result.stdout
+
+
+def test_cli_bootstrap_seed_command_generates_seed_files(tmp_path: Path):
+    source = tmp_path / "novel.txt"
+    source.write_text(
+        "第一章 开始\n"
+        "韩冈，字玉昆，刚刚醒来。\n",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "seed"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "app.api.cli",
+            "bootstrap-seed",
+            "--source",
+            str(source),
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+        cwd="/root/novel-reading-assistant",
+        capture_output=True,
+        text=True,
+    )
+
+    assert "character_count" in result.stdout
+    assert (output_dir / "character_aliases.seed.csv").exists()

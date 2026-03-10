@@ -98,3 +98,38 @@ def test_answer_question_can_use_llm_client_without_future_spoilers(tmp_path: Pa
     assert answer == "这是 LLM 生成的最终回答。"
     assert "第二章" not in llm.prompt
     assert "第一章" in llm.prompt
+
+
+def test_cli_helpers_do_not_leak_later_volumes_with_reset_chapter_numbers(tmp_path: Path):
+    source = tmp_path / "novel.txt"
+    source.write_text(
+        "卷一之卷 起始\n"
+        "卷一之卷\n"
+        "起始\n\n"
+        "第一章 第一卷第一章\n"
+        "第一章\n"
+        "第一卷第一章\n"
+        "韩冈刚刚醒来，这是开篇内容。\n\n"
+        "卷二之卷 续篇\n"
+        "卷二之卷\n"
+        "续篇\n\n"
+        "第一章 第二卷第一章\n"
+        "第一章\n"
+        "第二卷第一章\n"
+        "韩冈后来入相，这是后文内容。\n",
+        encoding="utf-8",
+    )
+
+    index_root = tmp_path / "index"
+    ingest_source(source=source, index_root=index_root)
+
+    answer = answer_question(
+        question="韩冈是谁",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+    )
+
+    assert "第一卷第一章" in answer
+    assert "第二卷第一章" not in answer
+    assert "后文内容" not in answer
