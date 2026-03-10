@@ -22,7 +22,12 @@ class ReadingAssistant:
 
         person_summary = self._person_summary(canonical_name, character_cards, current_chapter_idx)
         scene_summary = self._scene_summary(question, canonical_name, filtered_docs)
-        history_summary = self._history_summary(question, canonical_name, history_cards)
+        history_summary = self._history_summary(
+            question,
+            canonical_name,
+            history_cards,
+            current_chapter_idx,
+        )
 
         return compose_answer(
             person_summary=person_summary,
@@ -64,9 +69,13 @@ class ReadingAssistant:
         question: str,
         canonical_name: str,
         history_cards: list[dict],
+        current_chapter_idx: int,
     ) -> str:
         lowered_targets = {question.lower(), canonical_name.lower()}
         for card in history_cards:
+            min_chapter_idx = int(card.get("min_chapter_idx", 0))
+            if min_chapter_idx > current_chapter_idx:
+                continue
             keywords = {str(item).lower() for item in card.get("keywords", [])}
             if lowered_targets & keywords:
                 return str(card.get("summary", ""))

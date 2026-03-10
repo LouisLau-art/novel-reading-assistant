@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from app.ingestion.pipeline import ingest_txt_novel
+from app.knowledge.cards import load_character_cards, load_history_cards
 from app.retrieval.alias_resolver import load_alias_map
 from app.retrieval.vector_index import LocalVectorIndex
 from app.service import ReadingAssistant
@@ -87,6 +88,8 @@ def main() -> None:
     ask_parser.add_argument("--index-root", required=True)
     ask_parser.add_argument("--collection-name", required=True)
     ask_parser.add_argument("--alias-file")
+    ask_parser.add_argument("--character-cards-file")
+    ask_parser.add_argument("--history-cards-file")
 
     args = parser.parse_args()
     if args.command == "ingest":
@@ -106,6 +109,16 @@ def main() -> None:
             index_root=Path(args.index_root),
             collection_name=args.collection_name,
             alias_map=load_alias_map(Path(args.alias_file)) if args.alias_file else None,
+            character_cards=(
+                load_character_cards(Path(args.character_cards_file))
+                if args.character_cards_file
+                else None
+            ),
+            history_cards=(
+                load_history_cards(Path(args.history_cards_file))
+                if args.history_cards_file
+                else None
+            ),
         )
     )
 

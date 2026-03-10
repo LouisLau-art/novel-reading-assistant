@@ -53,3 +53,30 @@ python -m app.api.cli ask \
   --collection-name zaizhitianxia \
   --alias-file ./examples/character_aliases.example.csv
 ```
+
+## Ask With Character And History Cards
+
+Character cards use JSONL, one record per line:
+
+```json
+{"canonical_name":"韩冈","first_chapter_idx":1,"summary":"韩冈，截至第一章前的重要人物。"}
+```
+
+History cards also use JSONL:
+
+```json
+{"keywords":["韩冈","新法"],"min_chapter_idx":1,"summary":"这里涉及北宋政局与新法讨论。"}
+```
+
+You can pass both files to `ask`:
+
+```bash
+python -m app.api.cli ask \
+  --question "玉昆是谁" \
+  --chapter-idx 120 \
+  --index-root ./data/indexes \
+  --collection-name zaizhitianxia \
+  --alias-file ./examples/character_aliases.example.csv \
+  --character-cards-file ./examples/character_cards.example.jsonl \
+  --history-cards-file ./examples/history_cards.example.jsonl
+```
