@@ -4,6 +4,8 @@ from pathlib import Path
 
 from app.api.cli import build_request
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_build_request_keeps_question_and_progress():
     req = build_request("玉昆是谁", chapter_idx=120)
@@ -35,7 +37,7 @@ def test_cli_ask_supports_alias_file(tmp_path: Path):
             "novel",
         ],
         check=True,
-        cwd="/root/novel-reading-assistant",
+        cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
     )
@@ -58,7 +60,7 @@ def test_cli_ask_supports_alias_file(tmp_path: Path):
             str(alias_file),
         ],
         check=True,
-        cwd="/root/novel-reading-assistant",
+        cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
     )
@@ -100,7 +102,7 @@ def test_cli_ask_supports_character_and_history_card_files(tmp_path: Path):
             "novel",
         ],
         check=True,
-        cwd="/root/novel-reading-assistant",
+        cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
     )
@@ -127,7 +129,7 @@ def test_cli_ask_supports_character_and_history_card_files(tmp_path: Path):
             str(history_cards_file),
         ],
         check=True,
-        cwd="/root/novel-reading-assistant",
+        cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
     )
@@ -157,7 +159,7 @@ def test_cli_bootstrap_seed_command_generates_seed_files(tmp_path: Path):
             str(output_dir),
         ],
         check=True,
-        cwd="/root/novel-reading-assistant",
+        cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
     )

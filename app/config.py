@@ -3,10 +3,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+def _default_project_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
 @dataclass(slots=True)
 class Settings:
-    project_root: Path = Path("/root/novel-reading-assistant")
-    data_dir: Path = field(default_factory=lambda: Path("/root/novel-reading-assistant/data"))
+    project_root: Path = field(default_factory=_default_project_root)
+    data_dir: Path = field(default_factory=lambda: _default_project_root() / "data")
     llm_provider: str = "volcengine"
     llm_api_key: str = ""
     llm_model: str = ""

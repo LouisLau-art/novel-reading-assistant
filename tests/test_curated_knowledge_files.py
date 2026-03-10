@@ -3,9 +3,11 @@ from pathlib import Path
 from app.knowledge.cards import load_character_cards, load_history_cards
 from app.retrieval.alias_resolver import load_alias_map
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_curated_knowledge_files_exist_and_load():
-    root = Path("/root/novel-reading-assistant/data/curated/zaizhitianxia")
+    root = PROJECT_ROOT / "data/curated/zaizhitianxia"
     alias_file = root / "character_aliases.curated.csv"
     character_cards_file = root / "character_cards.curated.jsonl"
     history_cards_file = root / "history_cards.curated.jsonl"
