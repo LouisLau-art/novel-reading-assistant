@@ -54,6 +54,9 @@ class ReadingAssistant:
             text = str(doc.get("text", ""))
             if question in text or canonical_name in text:
                 return f"{doc.get('chapter_title', '未知章节')}：{text}"
+        if filtered_docs:
+            fallback = filtered_docs[0]
+            return f"{fallback.get('chapter_title', '未知章节')}：{fallback.get('text', '')}"
         return "在已读章节中没有找到直接对应的正文片段。"
 
     def _history_summary(
