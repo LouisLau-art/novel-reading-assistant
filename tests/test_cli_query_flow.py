@@ -2,6 +2,7 @@ from pathlib import Path
 
 from app.api.cli import answer_question, ingest_source
 from app.retrieval.alias_resolver import load_alias_map
+from app.retrieval.vector_index import LocalVectorIndex
 
 
 def test_cli_helpers_can_ingest_and_answer_without_future_spoilers(tmp_path: Path):
@@ -133,3 +134,144 @@ def test_cli_helpers_do_not_leak_later_volumes_with_reset_chapter_numbers(tmp_pa
     assert "第一卷第一章" in answer
     assert "第二卷第一章" not in answer
     assert "后文内容" not in answer
+
+
+def test_answer_question_prefers_global_chapter_order_for_same_chapter_numbers(tmp_path: Path):
+    source = tmp_path / "novel.txt"
+    source.write_text(
+        "卷一之卷 起始\n"
+        "卷一之卷\n"
+        "起始\n\n"
+        "第一章 第一卷第一章\n"
+        "第一章\n"
+        "第一卷第一章\n"
+        "韩冈初登场。\n\n"
+        "卷二之卷 续篇\n"
+        "卷二之卷\n"
+        "续篇\n\n"
+        "第一章 第二卷第一章\n"
+        "第一章\n"
+        "第二卷第一章\n"
+        "韩冈 韩冈 韩冈 这是明显后文。\n",
+        encoding="utf-8",
+    )
+
+    index_root = tmp_path / "index"
+    ingest_source(source=source, index_root=index_root)
+
+    answer = answer_question(
+        question="韩冈是谁",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+        n_results=10,
+    )
+
+    assert "第一卷第一章" in answer
+    assert "第二卷第一章" not in answer
+    assert "明显后文" not in answer
+
+
+def test_answer_question_excludes_future_volume_even_if_only_future_chunk_matches(tmp_path: Path):
+    source = tmp_path / "novel.txt"
+    source.write_text(
+        "卷一之卷 起始\n"
+        "卷一之卷\n"
+        "起始\n\n"
+        "第一章 第一卷第一章\n"
+        "第一章\n"
+        "第一卷第一章\n"
+        "韩冈初登场。\n\n"
+        "卷二之卷 续篇\n"
+        "卷二之卷\n"
+        "续篇\n\n"
+        "第一章 第二卷第一章\n"
+        "第一章\n"
+        "第二卷第一章\n"
+        "后文关键词只出现在这里。\n",
+        encoding="utf-8",
+    )
+
+    index_root = tmp_path / "index"
+    ingest_source(source=source, index_root=index_root)
+
+    answer = answer_question(
+        question="后文关键词",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+        n_results=10,
+    )
+
+    assert "第二卷第一章" not in answer
+    assert "后文关键词只出现在这里" not in answer
+
+
+def test_answer_question_uses_chapter_order_before_ranking_results(tmp_path: Path):
+    index_root = tmp_path / "index"
+    index = LocalVectorIndex(index_root)
+    index.upsert_many(
+        "novel",
+        [
+            {
+                "id": "future",
+                "document": "韩冈在第二卷已经位极人臣。",
+                "metadata": {
+                    "chapter_idx": 1,
+                    "chapter_order": 2,
+                    "chapter_title": "第二卷第一章",
+                },
+            },
+            {
+                "id": "past",
+                "document": "韩冈刚刚醒来。",
+                "metadata": {
+                    "chapter_idx": 1,
+                    "chapter_order": 1,
+                    "chapter_title": "第一卷第一章",
+                },
+            },
+        ],
+    )
+
+    answer = answer_question(
+        question="韩冈是谁",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+        n_results=1,
+    )
+
+    assert "第一卷第一章" in answer
+    assert "第二卷第一章" not in answer
+    assert "位极人臣" not in answer
+
+
+def test_ingest_source_replaces_existing_collection_contents(tmp_path: Path):
+    first_source = tmp_path / "first.txt"
+    first_source.write_text(
+        "第一章 开始\n"
+        "这是旧索引内容。\n",
+        encoding="utf-8",
+    )
+    second_source = tmp_path / "second.txt"
+    second_source.write_text(
+        "第一章 开始\n"
+        "这是新索引内容。\n",
+        encoding="utf-8",
+    )
+
+    index_root = tmp_path / "index"
+    ingest_source(source=first_source, index_root=index_root, collection_name="novel")
+    ingest_source(source=second_source, index_root=index_root, collection_name="novel")
+
+    answer = answer_question(
+        question="旧索引内容",
+        chapter_idx=1,
+        index_root=index_root,
+        collection_name="novel",
+        n_results=10,
+    )
+
+    assert "这是旧索引内容。" not in answer
+    assert "这是新索引内容。" in answer

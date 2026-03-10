@@ -21,7 +21,12 @@ class ReadingAssistant:
         canonical_name = self.resolver.resolve(question) or question
         filtered_docs = filter_by_progress(novel_docs, current_chapter_idx)
 
-        person_summary = self._person_summary(canonical_name, character_cards, current_chapter_idx)
+        person_summary = self._person_summary(
+            question,
+            canonical_name,
+            character_cards,
+            current_chapter_idx,
+        )
         scene_summary = self._scene_summary(question, canonical_name, filtered_docs)
         history_summary = self._history_summary(
             question,
@@ -49,12 +54,18 @@ class ReadingAssistant:
 
     def _person_summary(
         self,
+        question: str,
         canonical_name: str,
         character_cards: dict[str, dict],
         current_chapter_idx: int,
     ) -> str:
         card = character_cards.get(canonical_name)
         if not card:
+            if canonical_name != question:
+                return (
+                    f"已识别“{_question_subject(question)}”对应人物为“{canonical_name}”，"
+                    "当前没有人物卡。"
+                )
             return f"未找到 {canonical_name} 的人物卡。"
         if int(card.get("first_chapter_idx", 0)) > current_chapter_idx:
             return f"{canonical_name} 在你当前进度前尚未正式出场。"
@@ -109,3 +120,11 @@ class ReadingAssistant:
             f"小说内解释：\n{scene_summary}\n\n"
             f"历史背景解释：\n{history_summary}\n"
         )
+
+
+def _question_subject(question: str) -> str:
+    subject = question.strip().rstrip("？?")
+    for suffix in ("是谁", "是什么", "指谁", "指什么", "是哪个人"):
+        if subject.endswith(suffix):
+            return subject[: -len(suffix)] or subject
+    return subject

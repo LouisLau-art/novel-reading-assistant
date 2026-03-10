@@ -23,6 +23,9 @@ class LocalVectorIndex:
         path = self._collection_path(collection_name)
         path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    def replace_many(self, collection_name: str, items: list[dict]) -> None:
+        self._save(collection_name, list(items))
+
     def upsert_many(self, collection_name: str, items: list[dict]) -> None:
         existing = {record["id"]: record for record in self._load(collection_name)}
         for item in items:

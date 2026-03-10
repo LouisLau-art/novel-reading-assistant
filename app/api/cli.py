@@ -27,7 +27,7 @@ def ingest_source(
     payload = ingest_txt_novel(source_path)
 
     index = LocalVectorIndex(index_root)
-    index.upsert_many(collection, payload["chunks"])
+    index.replace_many(collection, payload["chunks"])
 
     return {
         "collection_name": collection,
