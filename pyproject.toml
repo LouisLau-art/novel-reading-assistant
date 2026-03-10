@@ -9,6 +9,9 @@ description = "Spoiler-safe reading assistant for long novels"
 requires-python = ">=3.12"
 dependencies = []
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
