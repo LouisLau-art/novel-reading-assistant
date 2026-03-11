@@ -13,7 +13,8 @@ class Settings:
     data_dir: Path = field(default_factory=lambda: _default_project_root() / "data")
     llm_provider: str = "volcengine"
     llm_api_key: str = ""
-    llm_model: str = ""
+    llm_model: str = ""  # 重量级模型：用于在线回答
+    llm_model_fast: str = ""  # 轻量级模型：用于批量提取
     llm_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
 
     @classmethod
@@ -24,8 +25,13 @@ class Settings:
             "NRA_LLM_PROVIDER",
             dotenv_values.get("NRA_LLM_PROVIDER", settings.llm_provider),
         )
-        settings.llm_api_key = os.getenv("ARK_API_KEY", dotenv_values.get("ARK_API_KEY", ""))
+        settings.llm_api_key = os.getenv(
+            "ARK_API_KEY", dotenv_values.get("ARK_API_KEY", "")
+        )
         settings.llm_model = os.getenv("ARK_MODEL", dotenv_values.get("ARK_MODEL", ""))
+        settings.llm_model_fast = os.getenv(
+            "ARK_MODEL_FAST", dotenv_values.get("ARK_MODEL_FAST", "")
+        )
         settings.llm_base_url = os.getenv(
             "ARK_BASE_URL",
             dotenv_values.get("ARK_BASE_URL", settings.llm_base_url),

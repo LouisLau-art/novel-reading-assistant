@@ -7,6 +7,7 @@ import re
 @dataclass(slots=True)
 class Chapter:
     chapter_idx: int
+    global_idx: int
     title: str
     volume_title: str
     content: str
@@ -19,7 +20,9 @@ class NovelText:
     chapters: list[Chapter]
 
 
-_CHAPTER_RE = re.compile(r"^第(?P<idx>[一二三四五六七八九十百千0-9]+)章(?:[ \t]+(?P<title>.*))?$")
+_CHAPTER_RE = re.compile(
+    r"^第[ \t]*(?P<idx>[一二三四五六七八九十百千0-9]+)[ \t]*章(?:[ \t]+(?P<title>.*))?$"
+)
 _VOLUME_RE = re.compile(r"^(?P<volume>.+之卷)(?:[ \t]+(?P<title>.+))?$")
 
 _CN_NUM_MAP = {
@@ -102,7 +105,11 @@ def _parse_chapter_heading(lines: list[str], index: int) -> tuple[int, str, int]
     if title:
         next_idx, next_line = _collect_nonblank(lines, index + 1)
         title_idx, title_line = _collect_nonblank(lines, (next_idx or index) + 1)
-        if next_line == f"第{match.group('idx')}章" and title_idx is not None and title_line == title:
+        if (
+            next_line == f"第{match.group('idx')}章"
+            and title_idx is not None
+            and title_line == title
+        ):
             return chapter_idx, f"第{match.group('idx')}章 {title}".strip(), title_idx
         return chapter_idx, stripped, index
 
@@ -120,6 +127,7 @@ def parse_chapters(text: str, *, default_volume_title: str = "") -> list[Chapter
     buffer: list[str] = []
     lines = text.splitlines()
     index = 0
+    global_counter = 1
 
     while index < len(lines):
         raw_line = lines[index]
@@ -142,11 +150,13 @@ def parse_chapters(text: str, *, default_volume_title: str = "") -> list[Chapter
                 chapters.append(
                     Chapter(
                         chapter_idx=current_idx,
+                        global_idx=global_counter,
                         title=current_title or f"第{current_idx}章",
                         volume_title=current_volume_title,
                         content="\n".join(buffer).strip(),
                     )
                 )
+                global_counter += 1
             current_idx, current_title, consumed_idx = chapter_heading
             buffer = []
             index = consumed_idx + 1
@@ -160,6 +170,7 @@ def parse_chapters(text: str, *, default_volume_title: str = "") -> list[Chapter
         chapters.append(
             Chapter(
                 chapter_idx=current_idx,
+                global_idx=global_counter,
                 title=current_title or f"第{current_idx}章",
                 volume_title=current_volume_title,
                 content="\n".join(buffer).strip(),

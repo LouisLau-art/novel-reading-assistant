@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
-
 
 class LocalVectorIndex:
     def __init__(self, root: Path) -> None:
@@ -21,7 +21,9 @@ class LocalVectorIndex:
 
     def _save(self, collection_name: str, records: list[dict]) -> None:
         path = self._collection_path(collection_name)
-        path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def replace_many(self, collection_name: str, items: list[dict]) -> None:
         self._save(collection_name, list(items))
@@ -44,23 +46,65 @@ class LocalVectorIndex:
             for record in self._load(collection_name)
             if _match_where(record.get("metadata", {}), where or {})
         ]
+
+        query_terms = _candidate_terms(query_text)
+        corpus_documents = [cand.get("document", "") for cand in candidates]
+        idf, avgdl = _compute_idf(corpus_documents, query_terms)
+
         scored = sorted(
             candidates,
-            key=lambda item: _score(query_text, item.get("document", "")),
+            key=lambda item: _score(query_terms, item.get("document", ""), idf, avgdl),
             reverse=True,
         )
-        return [item for item in scored[:n_results] if _score(query_text, item.get("document", "")) > 0]
+        return [
+            item
+            for item in scored[:n_results]
+            if _score(query_terms, item.get("document", ""), idf, avgdl) > 0
+        ]
 
+def _compute_idf(
+    corpus_documents: list[str], query_terms: list[str]
+) -> tuple[dict[str, float], float]:
 
-def _score(query_text: str, document: str) -> int:
-    score = 0
-    for term in _candidate_terms(query_text):
-        if term and term in document:
-            score += max(len(term), 1)
-    if query_text in document:
-        score += len(query_text) * 2
+    N = len(corpus_documents)
+    if N == 0:
+        return {}, 0.0
+
+    idf = {}
+    doc_terms_list = [_candidate_terms(doc) for doc in corpus_documents]
+    avgdl = sum(len(dt) for dt in doc_terms_list) / N
+
+    for q_term in query_terms:
+        n_qi = sum(1 for dt in doc_terms_list if q_term in dt)
+        idf[q_term] = math.log(1.0 + (N - n_qi + 0.5) / (n_qi + 0.5))
+
+    return idf, avgdl
+
+def _score(
+    query_terms: list[str],
+    document: str,
+    idf: dict[str, float],
+    avgdl: float,
+) -> float:
+    k1 = 1.2
+    b = 0.75
+    score = 0.0
+    doc_terms = _candidate_terms(document)
+    doc_len = len(doc_terms)
+
+    if doc_len == 0 or avgdl == 0.0:
+        return 0.0
+
+    for q_term in query_terms:
+        if q_term in doc_terms:
+            tf = document.count(q_term)
+            score += (
+                idf.get(q_term, 0.0)
+                * (tf * (k1 + 1))
+                / (tf + k1 * (1 - b + b * (doc_len / avgdl)))
+            )
+
     return score
-
 
 def _candidate_terms(query_text: str) -> list[str]:
     normalized = query_text.strip()
@@ -79,7 +123,6 @@ def _candidate_terms(query_text: str) -> list[str]:
                 terms.add(run[start : start + size])
 
     return sorted(terms, key=len, reverse=True)
-
 
 def _match_where(metadata: dict, where: dict) -> bool:
     if not where:

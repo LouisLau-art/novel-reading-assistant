@@ -12,10 +12,10 @@ def ingest_txt_novel(path: Path) -> dict:
     novel = parse_novel_text(text, title=source.stem)
 
     chunks: list[dict] = []
-    for chapter_order, chapter in enumerate(novel.chapters, start=1):
+    for chapter in novel.chapters:
         for chunk in chunk_text(
             chapter_idx=chapter.chapter_idx,
-            chapter_order=chapter_order,
+            chapter_order=chapter.global_idx,
             chapter_title=chapter.title,
             content=chapter.content,
         ):
@@ -27,7 +27,7 @@ def ingest_txt_novel(path: Path) -> dict:
                         "book_title": source.stem,
                         "volume_title": chapter.volume_title,
                         "chapter_idx": chapter.chapter_idx,
-                        "chapter_order": chapter_order,
+                        "chapter_order": chapter.global_idx,
                         "chapter_title": chapter.title,
                         "source_type": "novel",
                     },
@@ -37,12 +37,12 @@ def ingest_txt_novel(path: Path) -> dict:
     chapters = [
         {
             "chapter_idx": chapter.chapter_idx,
-            "chapter_order": chapter_order,
+            "chapter_order": chapter.global_idx,
             "chapter_title": chapter.title,
             "volume_title": chapter.volume_title,
             "content": chapter.content,
         }
-        for chapter_order, chapter in enumerate(novel.chapters, start=1)
+        for chapter in novel.chapters
     ]
 
     return {
